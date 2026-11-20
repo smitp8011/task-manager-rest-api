@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager - Live REST API Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    pre code {
+      font-family: 'Consolas', 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Top Navigation -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <i class="fa-solid fa-list-check text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight text-white flex items-center gap-2">
+            Task Manager <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-mono border border-indigo-500/30">REST API</span>
+          </h1>
+          <p class="text-xs text-slate-400">Powered by Django REST Framework & Token Authentication</p>
+        </div>
+      </div>
+
+      <div id="navUserSection" class="hidden flex items-center space-x-4">
+        <div class="text-right">
+          <p class="text-xs text-slate-400">Logged in as</p>
+          <p id="navUsername" class="text-sm font-semibold text-emerald-400"></p>
+        </div>
+        <button onclick="handleLogout()" class="px-3 py-1.5 text-xs rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <!-- Guest / Login View -->
+    <div id="authView" class="max-w-md mx-auto my-12 bg-slate-950 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 bg-indigo-600/20 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-key text-xl"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white">Login to Your Tasks</h2>
+        <p class="text-xs text-slate-400 mt-1">Token-based authentication via <code class="text-indigo-300">/api/auth/login/</code></p>
+      </div>
+
+      <div class="flex border-b border-slate-800 mb-6">
+        <button id="tabLoginBtn" onclick="switchAuthTab('login')" class="flex-1 pb-2 text-sm font-semibold border-b-2 border-indigo-500 text-indigo-400">Login</button>
+        <button id="tabRegisterBtn" onclick="switchAuthTab('register')" class="flex-1 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+          <input type="text" id="loginUsername" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="e.g. smit">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+          <input type="password" id="loginPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="••••••••">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+          <span>Get Auth Token & Login</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+          <input type="text" id="regUsername" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="e.g. rahul">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Email</label>
+          <input type="email" id="regEmail" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="rahul@example.com">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+          <input type="password" id="regPassword" required minlength="6" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="••••••••">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Confirm Password</label>
+          <input type="password" id="regPassword2" required minlength="6" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="••••••••">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2">
+          <span>Create Account</span>
+          <i class="fa-solid fa-user-plus text-xs"></i>
+        </button>
+      </form>
+
+      <div id="authAlert" class="mt-4 p-3 rounded-lg text-xs hidden"></div>
+    </div>
+
+    <!-- Authenticated Dashboard View -->
+    <div id="dashboardView" class="hidden space-y-6">
+
+      <!-- Metrics Cards Row -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+            <i class="fa-solid fa-list text-lg"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">Total Tasks</p>
+            <h3 id="statTotal" class="text-xl font-bold text-white">0</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+            <i class="fa-solid fa-clock text-lg"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">Pending</p>
+            <h3 id="statPending" class="text-xl font-bold text-amber-400">0</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-circle-check text-lg"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">Completed</p>
+            <h3 id="statCompleted" class="text-xl font-bold text-emerald-400">0</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center">
+            <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">Urgent (High)</p>
+            <h3 id="statUrgent" class="text-xl font-bold text-red-400">0</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Layout: Create Task & Task List -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Create Task & Categories Form -->
+        <div class="space-y-6">
+          <!-- Add Task Card -->
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-indigo-400"></i> Create New Task
+            </h2>
+            <form onsubmit="handleCreateTask(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs text-slate-300 mb-1">Task Title *</label>
+                <input type="text" id="taskTitle" required minlength="3" placeholder="e.g. Prepare Interview Answers" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+              </div>
+
+              <div>
+                <label class="block text-xs text-slate-300 mb-1">Description</label>
+                <textarea id="taskDesc" rows="2" placeholder="Details about this task..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1">Priority</label>
+                  <select id="taskPriority" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    <option value="LOW">🟢 Low</option>
+                    <option value="MEDIUM" selected>🟡 Medium</option>
+                    <option value="HIGH">🔴 High</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-xs text-slate-300 mb-1">Category</label>
+                  <select id="taskCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                    <option value="">No Category</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs text-slate-300 mb-1">Schedule / Due Date</label>
+                <input type="datetime-local" id="taskDueDate" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+              </div>
+
+              <button type="submit" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-paper-plane text-xs"></i>
+                <span>POST to /api/tasks/</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- Quick Add Category Card -->
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <h2 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-tags text-emerald-400"></i> User Categories
+            </h2>
+            <p class="text-xs text-slate-400 mb-3">Group your tasks into custom buckets (Work, Studies, etc.).</p>
+            <form onsubmit="handleCreateCategory(event)" class="space-y-2">
+              <input type="text" id="catName" required placeholder="New Category Name (e.g. Studies)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+              <button type="submit" class="w-full py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-medium text-xs transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Add Category</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right: Task List with Filters -->
+        <div class="lg:col-span-2 space-y-4">
+
+          <!-- Filter Toolbar -->
+          <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+              <button onclick="setFilter('ALL')" id="filterAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">All Tasks</button>
+              <button onclick="setFilter('PENDING')" id="filterPending" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">Pending</button>
+              <button onclick="setFilter('COMPLETED')" id="filterCompleted" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">Completed</button>
+              <button onclick="setFilter('HIGH')" id="filterHigh" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">High Priority</button>
+            </div>
+
+            <button onclick="loadAllData()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition flex items-center gap-1" title="Refresh from API">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+          </div>
+
+          <!-- Tasks Container -->
+          <div id="tasksList" class="space-y-3">
+            <!-- Dynamic task cards will be rendered here -->
+          </div>
+
+          <div id="noTasksMsg" class="hidden text-center py-12 bg-slate-950 border border-dashed border-slate-800 rounded-2xl p-6">
+            <i class="fa-solid fa-clipboard-check text-4xl text-slate-600 mb-2"></i>
+            <p class="text-sm text-slate-400">No tasks found for this filter!</p>
+            <p class="text-xs text-slate-500 mt-1">Create one using the form on the left.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Live REST API Inspector Drawer / Bottom Card -->
+    <div class="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+      <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-mono font-semibold text-slate-200">Live REST API Inspector</span>
+          <span class="text-[11px] text-slate-400">| Watch raw HTTP requests & JSON responses live</span>
+        </div>
+        <div id="inspectorStatusCode" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+          Ready
+        </div>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+        <div>
+          <p class="text-[11px] text-slate-400 font-sans mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-arrow-up text-indigo-400"></i> Request Sent (Headers & Body):
+          </p>
+          <pre id="inspectorRequest" class="bg-slate-900 p-3 rounded-lg border border-slate-800/80 text-indigo-300 overflow-x-auto max-h-48 text-[11px]">Ready. Click any button or login to see the HTTP packet.</pre>
+        </div>
+        <div>
+          <p class="text-[11px] text-slate-400 font-sans mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-arrow-down text-emerald-400"></i> Response Received from Django:
+          </p>
+          <pre id="inspectorResponse" class="bg-slate-900 p-3 rounded-lg border border-slate-800/80 text-emerald-300 overflow-x-auto max-h-48 text-[11px]">{ "status": "Ready to test" }</pre>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentFilter = 'ALL';
+    let allTasks = [];
+    let allCategories = [];
+
+    // Helper: update inspector
+    function logApi(method, url, requestData, statusCode, responseData) {
+      const codeBadge = document.getElementById('inspectorStatusCode');
+      codeBadge.innerText = `${method} ${url} -> [${statusCode}]`;
+      if (statusCode >= 200 && statusCode < 300) {
+        codeBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+      } else {
+        codeBadge.className = "text-xs font-mono px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30";
+      }
+
+      document.getElementById('inspectorRequest').innerText = JSON.stringify(requestData || {}, null, 2);
+      document.getElementById('inspectorResponse').innerText = JSON.stringify(responseData || {}, null, 2);
+    }
+
+    function getToken() {
+      return localStorage.getItem('task_api_token');
+    }
+
+    function getUsername() {
+      return localStorage.getItem('task_api_username');
+    }
+
+    function switchAuthTab(tab) {
+      if (tab === 'login') {
+        document.getElementById('loginForm').classList.remove('hidden');
+        document.getElementById('registerForm').classList.add('hidden');
+        document.getElementById('tabLoginBtn').className = "flex-1 pb-2 text-sm font-semibold border-b-2 border-indigo-500 text-indigo-400";
+        document.getElementById('tabRegisterBtn').className = "flex-1 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white";
+      } else {
+        document.getElementById('loginForm').classList.add('hidden');
+        document.getElementById('registerForm').classList.remove('hidden');
+        document.getElementById('tabRegisterBtn').className = "flex-1 pb-2 text-sm font-semibold border-b-2 border-emerald-500 text-emerald-400";
+        document.getElementById('tabLoginBtn').className = "flex-1 pb-2 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-white";
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+
+      const payload = { username, password };
+      try {
+        const res = await fetch('/api/auth/login/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        logApi('POST', '/api/auth/login/', payload, res.status, data);
+
+        if (res.ok) {
+          localStorage.setItem('task_api_token', data.token);
+          localStorage.setItem('task_api_username', data.user.username);
+          initApp();
+        } else {
+          showAuthAlert(data.non_field_errors || data.detail || 'Login failed. Check credentials.', 'error');
+        }
+      } catch (err) {
+        showAuthAlert(err.message, 'error');
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const password2 = document.getElementById('regPassword2').value;
+
+      const payload = { username, email, password, password2 };
+      try {
+        const res = await fetch('/api/auth/register/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        logApi('POST', '/api/auth/register/', payload, res.status, data);
+
+        if (res.ok) {
+          localStorage.setItem('task_api_token', data.token);
+          localStorage.setItem('task_api_username', data.user.username);
+          initApp();
+        } else {
+          const errs = Object.entries(data).map(([k, v]) => `${k}: ${v}`).join(' | ');
+          showAuthAlert(errs, 'error');
+        }
+      } catch (err) {
+        showAuthAlert(err.message, 'error');
+      }
+    }
+
+    async function handleLogout() {
+      const token = getToken();
+      try {
+        await fetch('/api/auth/logout/', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Token ' + token,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (err) {}
+      localStorage.removeItem('task_api_token');
+      localStorage.removeItem('task_api_username');
+      initApp();
+    }
+
+    function showAuthAlert(msg, type) {
+      const alert = document.getElementById('authAlert');
+      alert.innerText = msg;
+      alert.classList.remove('hidden');
+      alert.className = type === 'error' 
+        ? "mt-4 p-3 rounded-lg text-xs bg-red-500/10 text-red-400 border border-red-500/30"
+        : "mt-4 p-3 rounded-lg text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+    }
+
+    async function loadSummary() {
+      const token = getToken();
+      const res = await fetch('/api/tasks/summary/', {
+        headers: { 'Authorization': 'Token ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('statTotal').innerText = data.total_tasks;
+        document.getElementById('statPending').innerText = data.pending_tasks;
+        document.getElementById('statCompleted').innerText = data.completed_tasks;
+        document.getElementById('statUrgent').innerText = data.urgent_high_priority_tasks;
+      }
+    }
+
+    async function loadCategories() {
+      const token = getToken();
+      const res = await fetch('/api/categories/', {
+        headers: { 'Authorization': 'Token ' + token }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        allCategories = data.results || data;
+        const select = document.getElementById('taskCategory');
+        select.innerHTML = '<option value="">No Category</option>';
+        allCategories.forEach(c => {
+          select.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+      }
+    }
+
+    async function loadTasks() {
+      const token = getToken();
+      const res = await fetch('/api/tasks/', {
+        headers: { 'Authorization': 'Token ' + token }
+      });
+      const data = await res.json();
+      logApi('GET', '/api/tasks/', { Authorization: 'Token ' + token.substring(0, 8) + '...' }, res.status, data);
+
+      if (res.ok) {
+        allTasks = data.results || data;
+        renderTasks();
+      }
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      ['filterAll', 'filterPending', 'filterCompleted', 'filterHigh'].forEach(id => {
+        document.getElementById(id).className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition";
+      });
+
+      if (filter === 'ALL') document.getElementById('filterAll').className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
+      if (filter === 'PENDING') document.getElementById('filterPending').className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white transition";
+      if (filter === 'COMPLETED') document.getElementById('filterCompleted').className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition";
+      if (filter === 'HIGH') document.getElementById('filterHigh').className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition";
+
+      renderTasks();
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('tasksList');
+      const emptyMsg = document.getElementById('noTasksMsg');
+      container.innerHTML = '';
+
+      let filtered = allTasks;
+      if (currentFilter === 'PENDING') filtered = allTasks.filter(t => t.status === 'PENDING');
+      if (currentFilter === 'COMPLETED') filtered = allTasks.filter(t => t.status === 'COMPLETED');
+      if (currentFilter === 'HIGH') filtered = allTasks.filter(t => t.priority === 'HIGH');
+
+      if (filtered.length === 0) {
+        emptyMsg.classList.remove('hidden');
+        return;
+      }
+      emptyMsg.classList.add('hidden');
+
+      filtered.forEach(task => {
+        const isDone = task.status === 'COMPLETED';
+
+        let prioBadge = '';
+        if (task.priority === 'HIGH') prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">🔴 High</span>';
+        else if (task.priority === 'MEDIUM') prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">🟡 Medium</span>';
+        else prioBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 Low</span>';
+
+        const catBadge = task.category_detail 
+          ? `<span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300 border border-slate-700"><i class="fa-solid fa-tag text-[9px] mr-1"></i>${task.category_detail.name}</span>`
+          : '';
+
+        const dueDateText = task.due_date ? new Date(task.due_date).toLocaleString() : 'No Deadline';
+
+        container.innerHTML += `
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 transition hover:border-slate-700 flex items-start justify-between gap-3 ${isDone ? 'opacity-60' : ''}">
+            <div class="space-y-1 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="text-sm font-semibold text-white ${isDone ? 'line-through text-slate-400' : ''}">${task.title}</h4>
+                ${prioBadge}
+                ${catBadge}
+              </div>
+              ${task.description ? `<p class="text-xs text-slate-400">${task.description}</p>` : ''}
+              <div class="flex items-center gap-3 text-[11px] text-slate-500 pt-1">
+                <span><i class="fa-solid fa-calendar-day mr-1"></i>${dueDateText}</span>
+                <span>•</span>
+                <span>Status: <strong class="${isDone ? 'text-emerald-400' : 'text-amber-400'}">${task.status}</strong></span>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              ${!isDone ? `
+                <button onclick="markTaskDone(${task.id})" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs transition" title="Mark Done">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+              ` : ''}
+              <button onclick="deleteTask(${task.id})" class="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs transition" title="Delete Task">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    async function handleCreateTask(e) {
+      e.preventDefault();
+      const token = getToken();
+      const title = document.getElementById('taskTitle').value;
+      const description = document.getElementById('taskDesc').value;
+      const priority = document.getElementById('taskPriority').value;
+      const category = document.getElementById('taskCategory').value || null;
+      const due_date = document.getElementById('taskDueDate').value ? new Date(document.getElementById('taskDueDate').value).toISOString() : null;
+
+      const payload = { title, description, priority, category, due_date };
+
+      const res = await fetch('/api/tasks/', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Token ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      logApi('POST', '/api/tasks/', payload, res.status, data);
+
+      if (res.ok) {
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDesc').value = '';
+        document.getElementById('taskDueDate').value = '';
+        loadAllData();
+      } else {
+        alert("Validation error: " + JSON.stringify(data));
+      }
+    }
+
+    async function handleCreateCategory(e) {
+      e.preventDefault();
+      const token = getToken();
+      const name = document.getElementById('catName').value;
+      const payload = { name };
+
+      const res = await fetch('/api/categories/', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Token ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      logApi('POST', '/api/categories/', payload, res.status, data);
+
+      if (res.ok) {
+        document.getElementById('catName').value = '';
+        loadCategories();
+      } else {
+        alert("Category error: " + JSON.stringify(data));
+      }
+    }
+
+    async function markTaskDone(taskId) {
+      const token = getToken();
+      const res = await fetch(`/api/tasks/${taskId}/mark-completed/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Token ' + token,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await res.json();
+      logApi('POST', `/api/tasks/${taskId}/mark-completed/`, {}, res.status, data);
+      if (res.ok) {
+        loadAllData();
+      }
+    }
+
+    async function deleteTask(taskId) {
+      if (!confirm("Are you sure you want to DELETE this task?")) return;
+      const token = getToken();
+      const res = await fetch(`/api/tasks/${taskId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Token ' + token }
+      });
+      logApi('DELETE', `/api/tasks/${taskId}/`, {}, res.status, { message: "Task deleted" });
+      loadAllData();
+    }
+
+    function loadAllData() {
+      loadSummary();
+      loadCategories();
+      loadTasks();
+    }
+
+    function initApp() {
+      const token = getToken();
+      const username = getUsername();
+
+      if (token && username) {
+        document.getElementById('authView').classList.add('hidden');
+        document.getElementById('dashboardView').classList.remove('hidden');
+        document.getElementById('navUserSection').classList.remove('hidden');
+        document.getElementById('navUsername').innerText = username;
+        loadAllData();
+      } else {
+        document.getElementById('authView').classList.remove('hidden');
+        document.getElementById('dashboardView').classList.add('hidden');
+        document.getElementById('navUserSection').classList.add('hidden');
+      }
+    }
+
+    // Auto initialize on page load
+    window.onload = initApp;
+  </script>
+</body>
+</html>
